@@ -1,0 +1,10 @@
+diff --git a/dkuyoshi/KNN.py b/dkuyoshi/KNN.py
+index e635dff..65a6534 100644
+--- a/dkuyoshi/KNN.py
++++ b/dkuyoshi/KNN.py
+@@ -1,4 +1,5 @@
+ import numpy as np
++import cupy as cp
+ 
+ class KNN():
+     def __init__(self, embeddings, embedding, xp, k):

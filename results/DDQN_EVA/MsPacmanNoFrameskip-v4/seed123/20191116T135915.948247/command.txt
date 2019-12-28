@@ -1,0 +1,1 @@
+train.py --gpu 0 --env MsPacmanNoFrameskip-v4 --doubledqn --seed 123
