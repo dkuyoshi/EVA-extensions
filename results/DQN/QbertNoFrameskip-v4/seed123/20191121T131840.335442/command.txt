@@ -1,1 +1,0 @@
-train.py --gpu 0 --env QbertNoFrameskip-v4 --lambdas 0 --seed 123

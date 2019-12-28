@@ -1,1 +1,0 @@
-train.py --env QbertNoFrameskip-v4 --dueling --doubledqn --prioritized_replay --noisy_net_sigma 0.5 --num_step_return 3

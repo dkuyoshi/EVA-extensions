@@ -1,1 +1,0 @@
-train.py --env PongNoFrameskip-v4 --seed 123 --lambdas 0 --prioritized_replay
