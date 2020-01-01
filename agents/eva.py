@@ -216,22 +216,3 @@ class EVA(dqn.DQN):
             self.model.reset_state()
 
         self.replay_buffer.stop_current_episode()
-
-class EVADoubleDQN(EVA):
-
-    def _compute_target_values(self, exp_batch):
-        batch_next_state = exp_batch['next_state']
-
-        with chainer.using_config('train', False), state_kept(self.q_function):
-            next_qout = self.q_function(batch_next_state)
-
-        target_next_qout = self.target_q_function(batch_next_state)
-
-        next_q_max = target_next_qout.evaluate_actions(
-            next_qout.greedy_actions)
-
-        batch_rewards = exp_batch['reward']
-        batch_terminal = exp_batch['is_state_terminal']
-        discount = exp_batch['discount']
-
-        return batch_rewards + discount * (1.0 - batch_terminal) * next_q_max

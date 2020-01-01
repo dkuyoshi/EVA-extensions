@@ -26,11 +26,11 @@ from chainerrl import replay_buffer
 
 from chainerrl.wrappers import atari_wrappers
 import json
-from q_function import QFunction, DuelingQFunction
-from noisy_q_function import NoisyQFunction, NoisyDuelingQFunction
+from q_functions import QFunction, DuelingQFunction
+from q_functions import NoisyQFunction, NoisyDuelingQFunction
 from value_buffer import ValueBuffer
 from eva_replay_buffer import EVAReplayBuffer, EVAPrioritizedReplayBuffer
-from eva import EVA, EVADoubleDQN
+from agents import EVA, EVADoubleDQN
 
 
 def main():
