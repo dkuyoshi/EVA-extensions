@@ -1,7 +1,7 @@
 # REVA
  
 
-Integrate Rainbow with EVA
+Integrate Rainbow with Ephemeral Value Adjustment(EVA)
 
  ## Ephemeral Value Adjustment
 [Fast deep reinforcement learning using online adjustments from the past](https://arxiv.org/pdf/1810.08163.pdf)
@@ -22,6 +22,7 @@ Integrate Rainbow with EVA
 - --n_step_return 
 - --lambdas Set to 0 or 1 to use non parametric at all
 - --LRU Use LRU when storing at value buffer
+- --distribution Using Categorical DQN
 
 ## Requirement
 - chainerrl==0.6.0
