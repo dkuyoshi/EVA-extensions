@@ -9,13 +9,12 @@ Integrate Rainbow with Ephemeral Value Adjustment(EVA)
  ## Rainbow
 [Rainbow: Combining Improvements in Deep Reinforcement Learning](https://arxiv.org/pdf/1710.02298.pdf)
 
-## TODO
-- Implementation of C51
-- Complete version of Rainbow
-- Complete version of REVA
 
 ## Usage
 - train.py
+
+    Adapt to any combination of algorithms
+
     - --doubledqn Using Double DQN
     - --prioritized_replay Using PER
     - --dueling Using dueling network
@@ -26,6 +25,9 @@ Integrate Rainbow with Ephemeral Value Adjustment(EVA)
     - --distribution Using Categorical DQN(C51)
 
 - train_reva.py
+
+    Train with Rainbow
+    
     - --lambdas Set to 0 or 1 for using simple Rainbow
 
 ## Requirement
@@ -38,4 +40,3 @@ Integrate Rainbow with Ephemeral Value Adjustment(EVA)
 - train_reva.py
     - Constraction of results
         - RAINBOW or REVA/game/seed...
-        
