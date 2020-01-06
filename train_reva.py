@@ -26,11 +26,10 @@ from chainerrl import replay_buffer
 
 from chainerrl.wrappers import atari_wrappers
 import json
-from q_functions import QFunction, DuelingQFunction
-from q_functions import NoisyQFunction, NoisyDuelingQFunction
+from q_functions import NoisyDistributonalDuelingQFunction
 from value_buffer import ValueBuffer
-from eva_replay_buffer import EVAReplayBuffer, EVAPrioritizedReplayBuffer
-from agents import EVA, EVADoubleDQN
+from eva_replay_buffer import EVAPrioritizedReplayBuffer
+from agents import CategoricalDoubleEVA
 
 
 def main():
@@ -84,15 +83,10 @@ def main():
                         help='Target network period')
     parser.add_argument('--LRU', action='store_true', default=False,
                         help='Use LRU to store in value buffer')
-    parser.add_argument('--doubledqn', action='store_true', default=False,
-                        help='use double dqn')
-    parser.add_argument('--prioritized_replay', action='store_true', default=False)
-    parser.add_argument('--dueling', action='store_true', default=False,
-                        help='use dueling dqn')
-    parser.add_argument('--noisy_net_sigma', type=float, default=None,
+    parser.add_argument('--noisy_net_sigma', type=float, default=0.5,
                         help='NoisyNet explorer switch. This disables following options: '
                         '--final-exploration-frames, --final-epsilon, --eval-epsilon')
-    parser.add_argument('--num_step_return', type=int, default=1)
+    parser.add_argument('--num_step_return', type=int, default=3)
 
     args = parser.parse_args()
 
@@ -106,33 +100,13 @@ def main():
     train_seed = args.seed
     test_seed = 2 ** 31 - 1 - args.seed
     if args.lambdas == 0 or args.lambdas==1:
-        dir_name = ['DQN', 'DDQN', 'PR_DQN', 'PR_DDQN', 'DuelingDQN', 'DDDQN', 'PR_DDDQN']
+        name = 'RAINBOW'
     else:
-        dir_name = ['EVA', 'DDQN_EVA','PR_EVA', 'PR_DDQN_EVA', 'DuelingEVA', 'DDEVA', 'PR_DDEVA']
-
-    if args.dueling and args.doubledqn and args.prioritized_replay:
-        i = 6
-    elif args.dueling and args.doubledqn:
-        i = 5
-    elif args.dueling:
-        i = 4
-    elif (args.doubledqn) and (args.prioritized_replay):
-        i = 3
-    elif args.prioritized_replay:
-        i = 2
-    elif args.doubledqn:
-        i = 1
-    else:
-        i = 0
-
-    if args.noisy_net_sigma is not None:
-        n = 'Noisy'
-    else:
-        n = 'Egreedy'
+        name = 'REVA'
+        
     
     args.outdir = experiments.prepare_output_dir(
-        args, args.outdir, time_format='{}/{}step/{}/{}/seed{}/%Y%m%dT%H%M%S.%f'.format(dir_name[i], args.num_step_return, 
-        n, args.env, args.seed))
+        args, args.outdir, time_format='{}/{}/seed{}/%Y%m%dT%H%M%S.%f'.format(name,  args.env, args.seed))
     print('Output files are saved in {}'.format(args.outdir))
 
     def make_env(test):
@@ -163,31 +137,17 @@ def main():
         xp = np
 
     n_actions = env.action_space.n
-
     n_history = 4
+    n_atoms = 51
+    v_max = 10
+    v_min = -10
 
-    if args.noisy_net_sigma is not None:
-        if args.dueling:
-            q_func = NoisyDuelingQFunction(n_history, num_actions=n_actions, xp=xp, LRU=args.LRU, n_hidden=256, lambdas=args.lambdas, capacity=args.value_buffer_capacity,
-                            num_neighbors=args.value_buffer_neighbors, sigma=args.noisy_net_sigma)
-            explorer = explorers.Greedy()
-        else:
-            q_func = NoisyQFunction(n_history, num_actions=n_actions, xp=xp, LRU=args.LRU, n_hidden=256, lambdas=args.lambdas, capacity=args.value_buffer_capacity,
-                            num_neighbors=args.value_buffer_neighbors, sigma=args.noisy_net_sigma)
-            explorer = explorers.Greedy()
-    else:
-        if args.dueling:
-            q_func =   DuelingQFunction(n_history, num_actions=n_actions, xp=xp, LRU=args.LRU, n_hidden=256, lambdas=args.lambdas, capacity=args.value_buffer_capacity,
-                        num_neighbors=args.value_buffer_neighbors)
+    q_func = NoisyDistributonalDuelingQFunction(n_history, num_actions=n_actions, xp=xp, LRU=False,
+                                                n_atoms=n_atoms, v_min=v_min, v_max=v_max, n_hidden=256,
+                 lambdas=args.lambdas, capacity=args.value_buffer_capacity, num_neighbors=args.value_buffer_neighbors,
+                                                sigma=args.noisy_net_sigma)
 
-        else:
-            q_func = QFunction(n_history, num_actions=n_actions, xp=xp, LRU=args.LRU, n_hidden=256, lambdas=args.lambdas, capacity=args.value_buffer_capacity,
-                        num_neighbors=args.value_buffer_neighbors)
-        explorer = explorers.LinearDecayEpsilonGreedy(
-            start_epsilon=1.0, end_epsilon=0.01,
-            decay_steps=10 ** 6,
-            random_action_func=lambda: np.random.randint(n_actions))
-
+    explorer = explorers.Greedy()
 
     # Draw the computational graph and save it in the output directory.
     chainerrl.misc.draw_computational_graph(
@@ -198,27 +158,19 @@ def main():
     opt = optimizers.Adam(0.0001)
     opt.setup(q_func)
 
-    if args.prioritized_replay:
-        betasteps = (args.steps - args.replay_start_size) \
+    betasteps = (args.steps - args.replay_start_size) \
                     // args.update_interval
-        rbuf = EVAPrioritizedReplayBuffer(
-            args.replay_buffer_capacity, num_steps=args.num_step_return, key_width=256, xp=xp, M=args.replay_buffer_neighbors,
+    rbuf = EVAPrioritizedReplayBuffer(
+            args.replay_buffer_capacity, num_steps=args.num_step_return, key_width=256, xp=xp,
+            M=args.replay_buffer_neighbors,
             T=args.len_trajectory,
             betasteps=betasteps)
-    else:
-        rbuf = EVAReplayBuffer(args.replay_buffer_capacity, num_steps=args.num_step_return, key_width=256, xp=xp,
-                               M=args.replay_buffer_neighbors,
-                               T=args.len_trajectory)
-
 
     def phi(x):
         # Feature extractor
         return np.asarray(x, dtype=np.float32) / 255
 
-    if args.doubledqn:
-        Agent = EVADoubleDQN
-    else:
-        Agent = EVA
+    Agent = CategoricalDoubleEVA
 
     agent = Agent(q_func, opt, rbuf, gamma=args.gamma,
                   explorer=explorer, gpu=args.gpu, replay_start_size=args.replay_start_size,

@@ -15,18 +15,27 @@ Integrate Rainbow with Ephemeral Value Adjustment(EVA)
 - Complete version of REVA
 
 ## Usage
-- --doubledqn Using Double DQN
-- --prioritized_replay Using PER
-- --dueling Using dueling network
-- --noisy_net_sigma Using Noisy Nets(Numeric settings)
-- --n_step_return 
-- --lambdas Set to 0 or 1 to use non parametric at all
-- --LRU Use LRU when storing at value buffer
-- --distribution Using Categorical DQN
+- train.py
+    - --doubledqn Using Double DQN
+    - --prioritized_replay Using PER
+    - --dueling Using dueling network
+    - --noisy_net_sigma Using Noisy Nets(Numeric settings)
+    - --n_step_return 
+    - --lambdas Set to 0 or 1 to use non parametric at all
+    - --LRU Use LRU when storing at value buffer
+    - --distribution Using Categorical DQN(C51)
+
+- train_reva.py
+    - --lambdas Set to 0 or 1 for using simple Rainbow
 
 ## Requirement
 - chainerrl==0.6.0
 
 ## Note
-- Constraction of results
-    - Algorithms(DDDQN .etc)/Nstep/exploration/game/seed/...
+- train.py
+    - Constraction of results
+        - Algorithms(DDDQN .etc)/Nstep/exploration/game/seed/...
+- train_reva.py
+    - Constraction of results
+        - RAINBOW or REVA/game/seed...
+        
