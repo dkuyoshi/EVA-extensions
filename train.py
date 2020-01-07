@@ -28,6 +28,8 @@ from chainerrl.wrappers import atari_wrappers
 import json
 from q_functions import QFunction, DuelingQFunction
 from q_functions import NoisyQFunction, NoisyDuelingQFunction
+from q_functions import DistributionalQFunction, DistributonalDuelingQFunction
+from q_functions import NoisyDistributionalQFunction, NoisyDistributonalDuelingQFunction
 from value_buffer import ValueBuffer
 from eva_replay_buffer import EVAReplayBuffer, EVAPrioritizedReplayBuffer
 from agents import EVA, EVADoubleDQN
@@ -84,8 +86,6 @@ def main():
                         help='Target network period')
     parser.add_argument('--LRU', action='store_true', default=False,
                         help='Use LRU to store in value buffer')
-    parser.add_argument('--doubledqn', action='store_true', default=False,
-                        help='use double dqn')
     parser.add_argument('--prioritized_replay', action='store_true', default=False)
     parser.add_argument('--dueling', action='store_true', default=False,
                         help='use dueling dqn')
@@ -93,6 +93,8 @@ def main():
                         help='NoisyNet explorer switch. This disables following options: '
                         '--final-exploration-frames, --final-epsilon, --eval-epsilon')
     parser.add_argument('--num_step_return', type=int, default=1)
+    parser.add_argument('--agent', type=str, default='EVA', 
+                        choices=['EVA', 'DoubleEVA', 'CategoricalEVA', 'CategoricalDoubleEVA'])
 
     args = parser.parse_args()
 
@@ -105,34 +107,37 @@ def main():
     # Set different random seeds for train and test envs.
     train_seed = args.seed
     test_seed = 2 ** 31 - 1 - args.seed
-    if args.lambdas == 0 or args.lambdas==1:
-        dir_name = ['DQN', 'DDQN', 'PR_DQN', 'PR_DDQN', 'DuelingDQN', 'DDDQN', 'PR_DDDQN']
+        if args.lambdas == 0 or args.lambdas == 1:
+        if args.agent == 'EVA':
+            agent_name = 'DQN'
+        elif args.agent == 'DoubleEVA':
+            agent_name = 'DoubleDQN'
+        elif args.agent == 'CategoricalEVA':
+            agent_name = 'CategoricalDQN'
+        elif args.agent == 'CategoricalDoubleEVA':
+            agent_name = 'CategoricalDoubleDQN'
     else:
-        dir_name = ['EVA', 'DDQN_EVA','PR_EVA', 'PR_DDQN_EVA', 'DuelingEVA', 'DDEVA', 'PR_DDEVA']
+        agent_name = args.agent
 
-    if args.dueling and args.doubledqn and args.prioritized_replay:
-        i = 6
-    elif args.dueling and args.doubledqn:
-        i = 5
-    elif args.dueling:
-        i = 4
-    elif (args.doubledqn) and (args.prioritized_replay):
-        i = 3
-    elif args.prioritized_replay:
-        i = 2
-    elif args.doubledqn:
-        i = 1
+    if args.dueling == True:
+        q = 'Dueling'
     else:
-        i = 0
+        q = 'DQN'
+
+    if args.prioritized_replay == True:
+        p = 'PER'
+    else:
+        p = 'ER'
 
     if args.noisy_net_sigma is not None:
         n = 'Noisy'
     else:
         n = 'Egreedy'
-    
+
     args.outdir = experiments.prepare_output_dir(
-        args, args.outdir, time_format='{}/{}step/{}/{}/seed{}/%Y%m%dT%H%M%S.%f'.format(dir_name[i], args.num_step_return, 
-        n, args.env, args.seed))
+        args, args.outdir,
+        time_format='{}/{}/{}/{}step/{}/{}/seed{}/%Y%m%dT%H%M%S.%f'.format(agent_name, q, p, args.num_step_return,
+                                                                           n, args.env, args.seed))
     print('Output files are saved in {}'.format(args.outdir))
 
     def make_env(test):
@@ -166,27 +171,65 @@ def main():
 
     n_history = 4
 
-    if args.noisy_net_sigma is not None:
-        if args.dueling:
-            q_func = NoisyDuelingQFunction(n_history, num_actions=n_actions, xp=xp, LRU=args.LRU, n_hidden=256, lambdas=args.lambdas, capacity=args.value_buffer_capacity,
-                            num_neighbors=args.value_buffer_neighbors, sigma=args.noisy_net_sigma)
+        if args.agent == 'CategoricalEVA' or 'CategoricalDoubleEVA':
+        n_atoms = 51
+        v_max = 10
+        v_min = -10
+        if args.noisy_net_sigma is not None:
+            if args.dueling:
+                q_func = NoisyDistributonalDuelingQFunction(n_history, num_actions=n_actions, xp=xp, LRU=args.LRU,
+                                                            n_atoms=n_atoms, v_min=v_min, v_max=v_max, n_hidden=256,
+                                               lambdas=args.lambdas, capacity=args.value_buffer_capacity,
+                                               num_neighbors=args.value_buffer_neighbors, sigma=args.noisy_net_sigma)
+            else:
+                q_func = NoisyDistributionalQFunction(n_history, num_actions=n_actions, xp=xp, LRU=args.LRU,
+                                                      n_atoms=n_atoms, v_min=v_min, v_max=v_max, n_hidden=256,
+                                        lambdas=args.lambdas, capacity=args.value_buffer_capacity,
+                                        num_neighbors=args.value_buffer_neighbors, sigma=args.noisy_net_sigma)
             explorer = explorers.Greedy()
         else:
-            q_func = NoisyQFunction(n_history, num_actions=n_actions, xp=xp, LRU=args.LRU, n_hidden=256, lambdas=args.lambdas, capacity=args.value_buffer_capacity,
-                            num_neighbors=args.value_buffer_neighbors, sigma=args.noisy_net_sigma)
-            explorer = explorers.Greedy()
-    else:
-        if args.dueling:
-            q_func =   DuelingQFunction(n_history, num_actions=n_actions, xp=xp, LRU=args.LRU, n_hidden=256, lambdas=args.lambdas, capacity=args.value_buffer_capacity,
-                        num_neighbors=args.value_buffer_neighbors)
+            if args.dueling:
+                q_func = DistributonalDuelingQFunction(n_history, num_actions=n_actions, xp=xp, LRU=args.LRU,
+                                                       n_atoms=n_atoms, v_min=v_min, v_max=v_max, n_hidden=256,
+                                          lambdas=args.lambdas, capacity=args.value_buffer_capacity,
+                                          num_neighbors=args.value_buffer_neighbors)
 
+            else:
+                q_func = DistributionalQFunction(n_history, num_actions=n_actions, xp=xp, LRU=args.LRU,
+                                   n_atoms=n_atoms, v_min=v_min, v_max=v_max, n_hidden=256,
+                                   lambdas=args.lambdas, capacity=args.value_buffer_capacity,
+                                   num_neighbors=args.value_buffer_neighbors)
+
+            explorer = explorers.LinearDecayEpsilonGreedy(
+                start_epsilon=1.0, end_epsilon=0.01,
+                decay_steps=10 ** 6,
+                random_action_func=lambda: np.random.randint(n_actions))
+    else:
+        if args.noisy_net_sigma is not None:
+            if args.dueling:
+                q_func = NoisyDuelingQFunction(n_history, num_actions=n_actions, xp=xp, LRU=args.LRU, n_hidden=256,
+                                               lambdas=args.lambdas, capacity=args.value_buffer_capacity,
+                                               num_neighbors=args.value_buffer_neighbors, sigma=args.noisy_net_sigma)
+            else:
+                q_func = NoisyQFunction(n_history, num_actions=n_actions, xp=xp, LRU=args.LRU, n_hidden=256,
+                                        lambdas=args.lambdas, capacity=args.value_buffer_capacity,
+                                        num_neighbors=args.value_buffer_neighbors, sigma=args.noisy_net_sigma)
+            explorer = explorers.Greedy()
         else:
-            q_func = QFunction(n_history, num_actions=n_actions, xp=xp, LRU=args.LRU, n_hidden=256, lambdas=args.lambdas, capacity=args.value_buffer_capacity,
-                        num_neighbors=args.value_buffer_neighbors)
-        explorer = explorers.LinearDecayEpsilonGreedy(
-            start_epsilon=1.0, end_epsilon=0.01,
-            decay_steps=10 ** 6,
-            random_action_func=lambda: np.random.randint(n_actions))
+            if args.dueling:
+                q_func = DuelingQFunction(n_history, num_actions=n_actions, xp=xp, LRU=args.LRU, n_hidden=256,
+                                          lambdas=args.lambdas, capacity=args.value_buffer_capacity,
+                                          num_neighbors=args.value_buffer_neighbors)
+
+            else:
+                q_func = QFunction(n_history, num_actions=n_actions, xp=xp, LRU=args.LRU, n_hidden=256,
+                                   lambdas=args.lambdas, capacity=args.value_buffer_capacity,
+                                   num_neighbors=args.value_buffer_neighbors)
+
+            explorer = explorers.LinearDecayEpsilonGreedy(
+                start_epsilon=1.0, end_epsilon=0.01,
+                decay_steps=10 ** 6,
+                random_action_func=lambda: np.random.randint(n_actions))
 
 
     # Draw the computational graph and save it in the output directory.
@@ -215,10 +258,13 @@ def main():
         # Feature extractor
         return np.asarray(x, dtype=np.float32) / 255
 
-    if args.doubledqn:
-        Agent = EVADoubleDQN
-    else:
-        Agent = EVA
+    def get_agent(agent):
+        return {'EVA': EVA,
+                'DoubleEVA': EVADoubleDQN,
+                'CategoricalEVA': CategoricalEVA,
+                'CategoricalDoubleEVA': CategoricalDoubleEVA}[agent]
+
+    Agent = get_agent(args.agent)   
 
     agent = Agent(q_func, opt, rbuf, gamma=args.gamma,
                   explorer=explorer, gpu=args.gpu, replay_start_size=args.replay_start_size,
