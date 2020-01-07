@@ -14,15 +14,14 @@ Integrate Rainbow with Ephemeral Value Adjustment(EVA)
 - train.py
 
     Adapt to any combination of algorithms
-
-    - --doubledqn Using Double DQN
+    - --agent choose 'EVA', 'DoubleEVA', 'CategoricalEVA', 'CategoricalDoubleEVA'
     - --prioritized_replay Using PER
     - --dueling Using dueling network
     - --noisy_net_sigma Using Noisy Nets(Numeric settings)
-    - --n_step_return 
-    - --lambdas Set to 0 or 1 to use non parametric at all
+    - --n_step_return Set to numeric
+    - --lambdas Set to 0 or 1 to use non parametric at all(DQN, DoubleDQN... .etc)
     - --LRU Use LRU when storing at value buffer
-    - --distribution Using Categorical DQN(C51)
+    
 
 - train_reva.py
 
