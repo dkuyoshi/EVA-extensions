@@ -64,8 +64,7 @@ class EVA(dqn.DQN):
     def act_and_train(self, obs, reward):
         with chainer.using_config('train', False), chainer.no_backprop_mode():
             action_value = self.model(
-                self.batch_states([obs], self.xp, self.phi), eva=(len(self.value_buffer.embeddings) == self.value_buffer.capacity),
-                t=self.t)
+                self.batch_states([obs], self.xp, self.phi), eva=(len(self.value_buffer.embeddings) == self.value_buffer.capacity))
             q = float(action_value.max.array)
             greedy_action = cuda.to_cpu(action_value.greedy_actions.array)[0]
             embed = cuda.to_cpu(self.model.get_embedding().array)
