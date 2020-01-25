@@ -226,10 +226,7 @@ def main():
                                    lambdas=args.lambdas, capacity=args.value_buffer_capacity,
                                    num_neighbors=args.value_buffer_neighbors)
 
-            explorer = explorers.LinearDecayEpsilonGreedy(
-                start_epsilon=1.0, end_epsilon=0.01,
-                decay_steps=10 ** 6,
-                random_action_func=lambda: np.random.randint(n_actions))
+            explorer = explorers.Greedy()
 
 
     # Draw the computational graph and save it in the output directory.
