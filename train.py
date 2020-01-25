@@ -107,7 +107,7 @@ def main():
     # Set different random seeds for train and test envs.
     train_seed = args.seed
     test_seed = 2 ** 31 - 1 - args.seed
-        if args.lambdas == 0 or args.lambdas == 1:
+    if args.lambdas == 0 or args.lambdas == 1:
         if args.agent == 'EVA':
             agent_name = 'DQN'
         elif args.agent == 'DoubleEVA':
