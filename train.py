@@ -171,7 +171,7 @@ def main():
 
     n_history = 4
 
-        if args.agent == 'CategoricalEVA' or 'CategoricalDoubleEVA':
+    if args.agent == 'CategoricalEVA' or 'CategoricalDoubleEVA':
         n_atoms = 51
         v_max = 10
         v_min = -10
