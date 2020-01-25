@@ -32,7 +32,7 @@ from q_functions import DistributionalQFunction, DistributonalDuelingQFunction
 from q_functions import NoisyDistributionalQFunction, NoisyDistributonalDuelingQFunction
 from value_buffer import ValueBuffer
 from eva_replay_buffer import EVAReplayBuffer, EVAPrioritizedReplayBuffer
-from agents import EVA, EVADoubleDQN
+from agents import EVA, EVADoubleDQN, CategoricalEVA, CategoricalDoubleEVA
 
 
 def main():
